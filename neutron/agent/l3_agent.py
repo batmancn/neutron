@@ -45,7 +45,7 @@ def register_opts(conf):
     conf.register_opts(ra.OPTS)
     config.register_availability_zone_opts_helper(conf)
 
-
+#
 def main(manager='neutron.agent.l3.agent.L3NATAgentWithStateReport'):
     register_opts(cfg.CONF)
     common_config.init(sys.argv[1:])
