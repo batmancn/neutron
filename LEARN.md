@@ -12,13 +12,26 @@ Same as all openstack system, neutron devide into cli and server. For both part 
 For architecture, refer to <1> neutron section: cli request to neutron server, server dispatch request to plugins, plugin call agent if neccerry. All communication is json rpc, which is server call plugin by json rpc, plugin call agent by json rpc.
 
 Architecture design point:
-- build/install system, using setup tool, refer to setup.cfg. Init chain is configured in etc folder as entry point.
-- configure system using oslo.
+- Build install system: setuptool, entry points. setup.cfg ...
+- configure system: oslo.config. etc/*.
+- IO and event-notifier: eventlet. neutron/cmd/eventlet/*.
 - Use RPC to communicate between process. There are 3 kind of RPC: neutron-server RPC, plugin RPC, agent RPC.
 - DB architecture is same as WebOVS, which is models/db.
 - neutron-server is designed as REST server, and dispatch request to plugin and then call plugin by RPC.
 - Kinds of plugins, all is to implement interfaces. So summary interface inherince map is OK.
 - Kinds of agent???
+
+
+### Eventlet library and green thread
+
+http://eventlet.net/
+http://eventlet.net/doc/examples.html
+
+1. use epoll as non-blocking-io; 2. C-Style thread library coding style, Refer to 'Web Crawler Example'; 3. implict dispatch, Refer to 'Web Crawler Example', all user care is just define 'fetch' method and use 'for' loop to get result.
+
+Neutron extensively utilizes the eventlet library to provide asynchronous concurrency model to its services. Refer to neutron/cmd/eventlet/*, these command entry points use eventlet to dispatch user input command.
+
+Green thread.
 
 
 ### Configure system and oslo?

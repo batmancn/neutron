@@ -12,4 +12,6 @@
 
 from neutron.common import eventlet_utils
 
+# This makes this module become greenthread-friendly, basic principle is use eventlet's library to instead python library like socket/threading/asyncore.
+# http://eventlet.net/doc/patching.html#monkey-patch
 eventlet_utils.monkey_patch()
