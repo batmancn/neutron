@@ -13,6 +13,15 @@
 #    under the License.
 #
 
+'''
+Reference:
+1. http://docs.openstack.org/developer/neutron/devref/layer3.html#neutron-logical-network-setup
+2. API: http://developer.openstack.org/api-ref/networking/v2/index.html
+3.
+
+This is main entry of l3 agent.
+'''
+
 import eventlet
 import netaddr
 from oslo_config import cfg
@@ -36,7 +45,7 @@ from neutron.agent.l3 import namespace_manager
 from neutron.agent.l3 import namespaces
 from neutron.agent.l3 import router_processing_queue as queue
 from neutron.agent.linux import external_process
-from neutron.agent.linux import ip_lib
+from neutron.agent.linux import ip_lib  # ip command library
 from neutron.agent.linux import pd
 from neutron.agent.metadata import driver as metadata_driver
 from neutron.agent import rpc as agent_rpc

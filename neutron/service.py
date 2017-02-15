@@ -83,6 +83,7 @@ class WsgiService(object):
         self.wsgi_app.wait()
 
 
+# this is factory method implement.
 class NeutronApiService(WsgiService):
     """Class for neutron-api service."""
 
@@ -100,10 +101,12 @@ class NeutronApiService(WsgiService):
         return service
 
 
+# This is factory mathod entry interface.
 def serve_wsgi(cls):
 
     try:
         service = cls.create()
+        # this start api is derived from WsgiSerice
         service.start()
     except Exception:
         with excutils.save_and_reraise_exception():

@@ -71,8 +71,10 @@ class APIRouter(base_wsgi.Router):
         return cls(**local_config)
 
     def __init__(self, **local_config):
+        # get URL mapping facilities, how to use refer to
+        # https://routes.readthedocs.io/en/latest/
         mapper = routes_mapper.Mapper()
-        plugin = manager.NeutronManager.get_plugin()
+        plugin = manager.NeutronManager.get_plugin() # get plugins
         ext_mgr = extensions.PluginAwareExtensionManager.get_instance()
         ext_mgr.extend_resources("2.0", attributes.RESOURCE_ATTRIBUTE_MAP)
 
@@ -100,6 +102,11 @@ class APIRouter(base_wsgi.Router):
                                      **mapper_kwargs)
 
         mapper.connect('index', '/', controller=Index(RESOURCES))
+        # this is to mapping URLs to 'NETWORK' etc resource in
+        # attribute.py RESOURCE_ATTRIBUTE_MAP.
+        #
+        # So if you want to extend URL-resource mapping, change
+        # in attribute.py RESOURCE_ATTRIBUTE_MAP.
         for resource in RESOURCES:
             _map_resource(RESOURCES[resource], resource,
                           attributes.RESOURCE_ATTRIBUTE_MAP.get(

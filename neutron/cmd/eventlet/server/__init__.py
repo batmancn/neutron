@@ -18,6 +18,9 @@ from neutron.server import wsgi_eventlet
 from neutron.server import wsgi_pecan
 
 
+# This is called by '/etc/init.d/neutron-server', which is defined in
+# setup.cfg's entry_points section:
+# 'neutron-server = neutron.cmd.eventlet.server:main'
 def main():
     server.boot_server(_main_neutron_server)
 
@@ -29,5 +32,7 @@ def _main_neutron_server():
         wsgi_pecan.pecan_wsgi_server()
 
 
+# This is called by '/etc/init.d/neutron-rpc-server', which is defined in
+# setup.cfg's entry_points section.
 def main_rpc_eventlet():
     server.boot_server(rpc_eventlet.eventlet_rpc_server)

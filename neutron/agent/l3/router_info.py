@@ -46,15 +46,29 @@ class RouterInfo(object):
                  agent_conf,
                  interface_driver,
                  use_ipv6=False):
-        self.router_id = router_id
-        self.ex_gw_port = None
+        '''
+        RouterInfo is routing info database operation, refer to method '_update_routing_table'.
+        Which is use 'ip route' command.
+
+        Important method:
+            update_routing_table: main entry of add/delete/replace route table
+                in kernel route table.
+            floating_forward_rules: update SNAT for floating ip.
+            floating_mangle_rules: update mangle table.
+            process_floating_ip_address_scope_rules:
+            process_floating_ip_addresses:
+
+        '''
+        self.router_id = router_id # router id
+        self.ex_gw_port = None # external gateway port
         self._snat_enabled = None
-        self.fip_map = {}
-        self.internal_ports = []
-        self.floating_ips = set()
+        self.fip_map = {} # forwarding ip map [ip, port] ???
+        self.internal_ports = [] # internal subnet port???
+        self.floating_ips = set() # floating ip database
         # Invoke the setter for establishing initial SNAT action
-        self.router = router
+        self.router = router # ???
         self.use_ipv6 = use_ipv6
+        # create routing info namespace
         ns = self.create_router_namespace_object(
             router_id, agent_conf, interface_driver, use_ipv6)
         self.router_namespace = ns
@@ -121,9 +135,12 @@ class RouterInfo(object):
         cmd = ['ip', 'route', operation, 'to', route['destination'],
                'via', route['nexthop']]
         ip_wrapper = ip_lib.IPWrapper(namespace=namespace)
-        ip_wrapper.netns.execute(cmd, check_exit_code=False)
+        ip_wrapper.netns.execute(cmd, check_exit_code=False) # exec command in its namespace.
 
     def update_routing_table(self, operation, route):
+        '''
+        Main API of updating routing table.
+        '''
         self._update_routing_table(operation, route, self.ns_name)
 
     def routes_updated(self, old_routes, new_routes):
@@ -149,6 +166,9 @@ class RouterInfo(object):
         return self.router.get(l3_constants.FLOATINGIP_KEY, [])
 
     def floating_forward_rules(self, floating_ip, fixed_ip):
+        """
+        For floating ip, add SNAT.
+        """
         return [('PREROUTING', '-d %s/32 -j DNAT --to-destination %s' %
                  (floating_ip, fixed_ip)),
                 ('OUTPUT', '-d %s/32 -j DNAT --to-destination %s' %
@@ -200,6 +220,9 @@ class RouterInfo(object):
 
         floating_ips = self.get_floating_ips()
         # Loop once to ensure that floating ips are configured.
+        # fip: {'fixed_ip_address':fixed ip, 'floating_ip_address':fip}
+        # This fixedIp and fip mapping could get from database, which is
+        # set by user.
         for fip in floating_ips:
             # Rebuild iptables rules for the floating ip.
             fixed = fip['fixed_ip_address']
@@ -247,6 +270,7 @@ class RouterInfo(object):
             fixed_ip = fip['fixed_ip_address']
             fixed_scope = fip.get('fixed_ip_address_scope')
             internal_mark = self.get_address_scope_mark_mask(fixed_scope)
+            # mangle table rules is used for flow based QoS.
             mangle_rules = self.floating_mangle_rules(
                 fip_ip, fixed_ip, internal_mark)
             for chain, rule in mangle_rules:
@@ -403,6 +427,10 @@ class RouterInfo(object):
                                           self.agent_conf)
 
     def internal_network_added(self, port):
+        """
+        add port to internal network, which is not using floating ip but
+        internal fixed ip.
+        """
         network_id = port['network_id']
         port_id = port['id']
         fixed_ips = port['fixed_ips']
@@ -472,9 +500,16 @@ class RouterInfo(object):
             namespace=self.ns_name)
 
     def address_scope_mangle_rule(self, device_name, mark_mask):
+        """
+        For scope, add mangle rule. Scope is http://linux-ip.net/html/tools-ip-address.html#tb-tools-ip-addr-scope
+        So different Scope need different QoS rule.
+        """
         return '-i %s -j MARK --set-xmark %s' % (device_name, mark_mask)
 
     def address_scope_filter_rule(self, device_name, mark_mask):
+        """
+        For different scope, different firewall rule.
+        """
         return '-o %s -m mark ! --mark %s -j DROP' % (
             device_name, mark_mask)
 

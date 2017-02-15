@@ -16,6 +16,9 @@ from neutron.agent.l3 import router_info as router
 from neutron.agent.linux import ip_lib
 from neutron.common import constants as l3_constants
 
+"""
+LegacyRouter is built-in router to
+"""
 
 class LegacyRouter(router.RouterInfo):
     def add_floating_ip(self, fip, interface_name, device):

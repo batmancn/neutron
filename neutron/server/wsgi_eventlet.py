@@ -11,6 +11,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# For eventlet and spawn/GreenPool etc api, refer to
+# http://eventlet.net/
+
 import eventlet
 from oslo_log import log
 
@@ -21,6 +24,7 @@ LOG = log.getLogger(__name__)
 
 
 def eventlet_wsgi_server():
+    # Create api service. For neutron, all module is treat as service.
     neutron_api = service.serve_wsgi(service.NeutronApiService)
     start_api_and_rpc_workers(neutron_api)
 
@@ -36,6 +40,7 @@ def start_api_and_rpc_workers(neutron_api):
         LOG.info(_LI("RPC was already started in parent process by "
                      "plugin."))
     else:
+        # spawn??? and neutron_rpc.wait???
         rpc_thread = pool.spawn(neutron_rpc.wait)
 
         plugin_workers = service.start_plugin_workers()
