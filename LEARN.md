@@ -15,6 +15,7 @@ Architecture design point:
 - Build install system: setuptool, entry points. setup.cfg ...
 - configure system: oslo.config. etc/*.
 - IO and event-notifier: eventlet. neutron/cmd/eventlet/*.
+- database: only neutron-server connect to database.
 - Use RPC to communicate between process. There are 3 kind of RPC: neutron-server RPC, plugin RPC, agent RPC.
 - DB architecture is same as WebOVS, which is models/db.
 - neutron-server is designed as REST server, and dispatch request to plugin and then call plugin by RPC.
@@ -24,34 +25,40 @@ Architecture design point:
 
 ### Eventlet library and green thread
 
+Neutron extensively utilizes the eventlet library to provide asynchronous concurrency model to its services. Refer to neutron/cmd/eventlet/__init__.py.
+
 http://eventlet.net/
 http://eventlet.net/doc/examples.html
 
 1. use epoll as non-blocking-io; 2. C-Style thread library coding style, Refer to 'Web Crawler Example'; 3. implict dispatch, Refer to 'Web Crawler Example', all user care is just define 'fetch' method and use 'for' loop to get result.
 
-Neutron extensively utilizes the eventlet library to provide asynchronous concurrency model to its services. Refer to neutron/cmd/eventlet/*, these command entry points use eventlet to dispatch user input command.
 
-Green thread.
+### Configure system
 
+1) file:///Z:/MyLife/nfv_sdn/nfv_openstack/neutron/doc/build/html/devref/api_layer.html
+2) http://docs.openstack.org/developer/oslo.config/cfg.html
 
-### Configure system and oslo?
+Architecture:
+Configure system devide into 2: reading from *.ini configure files(oslo.config); reading configures and then use it(neutron/neutron/common/config.py). config.py use oslo.config.CONF to create WSGI app, refer to <1)>
 
-http://www.choudan.net/2013/11/27/OpenStack-Oslo.config-%E5%AD%A6%E4%B9%A0(%E4%B8%80).html
-https://wiki.openstack.org/wiki/Oslo
-http://git.openstack.org/cgit/openstack/oslo.config
-http://docs.openstack.org/developer/oslo.config/cfg.html
+oslo.config:
+This library is for command line options parse and use(cli_opts); configuration file parse and use(common_opts). For cli_opts, compare to appctl command defined in OVS code. For common_opts, it's configure system.
+<2)> is main intruduce page, use this as reference.
 
-oslo.config library is for command line options parse and use(cli_opts); configuration file parse and use(common_opts). For cli_opts, compare to appctl command defined in OVS code. For common_opts, it's configure system.
+config.py:
+neutron/neutron/common/config.py use values from oslo.config.CONF which is parsed from api-paste.ini
 
-http://docs.openstack.org/developer/oslo.config/cfg.html This is main intruduce page, use this as reference.
-
-DIY: oslo is used .ini files, and refer to README.txt, use command to produce *.ini.sample files, these files is configure we use. Refer to learn/oslo_learn.py.
+DIY:
+oslo is used .ini files, and refer to README.txt, use command to produce *.ini.sample files, these files is configure we use. Refer to learn/oslo_learn.py.
 
 
 ### Rootwrap? TBD
 
 
 ### Neutron server?
+
+Neutron's WSGI server: file:///Z:/MyLife/nfv_sdn/nfv_openstack/neutron/doc/build/html/devref/api_layer.html.
+- Build and init process: entry point 'server_wsgi'.
 
 Start call trace:
 /etc/init.d/neutron-server -> ./neutron/server/__init__.py main() -> wsgi_evenlet.py eventlet_wsgi_server() -> start_api_and_rpc_workers(here start all tasks: api, rpc, all plugins).
