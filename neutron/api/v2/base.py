@@ -727,4 +727,5 @@ def create_resource(collection, resource, plugin, params, allow_bulk=False,
                             allow_pagination=allow_pagination,
                             allow_sorting=allow_sorting)
 
+    # This is to add WSGI app.
     return wsgi_resource.Resource(controller, FAULT_MAP)
