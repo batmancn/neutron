@@ -353,6 +353,7 @@ class Securitygroup(extensions.ExtensionDescriptor):
 
 @six.add_metaclass(abc.ABCMeta)
 class SecurityGroupPluginBase(object):
+    # this is only used in neutron\db\securitygroups_db.py
 
     @abc.abstractmethod
     def create_security_group(self, context, security_group):

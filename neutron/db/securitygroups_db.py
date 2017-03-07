@@ -139,6 +139,8 @@ class SecurityGroupDbMixin(ext_sg.SecurityGroupPluginBase):
         If default_sg is true that means we are a default security group for
         a given tenant if it does not exist.
         """
+        # security_group = ['security_group'=s]
+        # s = ['tenant_id'=id]
         s = security_group['security_group']
         kwargs = {
             'context': context,

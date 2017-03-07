@@ -16,7 +16,7 @@ class FabricError(nexception.Invalid):
 # Each FABRIC_NETWORKS represents a fabric network.
 FABRIC_NETWORKS = "fabric_networks"
 RESOURCE_ATTRIBUTE_MAP = {
-    FABRIC_NETWORKS = {
+    FABRIC_NETWORKS : {
         'id': {'allow_post': False, 'allow_put': False,
                'validate': {'type:uuid': None},
                'is_visible': True,

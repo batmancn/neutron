@@ -2,6 +2,9 @@ import sqlalchemy as sa
 
 from neutron.db import model_base
 from neutron.db import models_v2
+from oslo_log import log as logging
+
+LOG = logging.getLogger(__name__)
 
 
 class FabricNetwork(model_base.BASEV2, models_v2.HasId,
@@ -17,11 +20,11 @@ class FabricNetwork(model_base.BASEV2, models_v2.HasId,
 # TBD: ext_sg.FabricNetworkPlugin
 # this is APIs for REST API to access DB.
 class FabricNetworkDbMixin(ext_sg.FabricNetworkPlugin):
-    def create_fabric_network():
-        pass
+    def create_fabric_network(self):
+        LOG.info("create_fabric_network")
 
-    def delete_fabric_network():
-        pass
+    def delete_fabric_network(self):
+        LOG.info("delete_fabric_network")
 
-    def get_fabric_network():
-        pass
+    def get_fabric_network(self):
+        LOG.info("get_fabric_network")
