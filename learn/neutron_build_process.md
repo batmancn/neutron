@@ -1,3 +1,7 @@
+1. first run 'tox' to prepare enviroment.
+
+
+
 gateway@gateway-20150605:~/MyLife/nfv_sdn/nfv_openstack/neutron$ python ./setup.py build
 running build
 running build_py
