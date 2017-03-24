@@ -1,6 +1,12 @@
+"""
+<openstack设计与实现>P117
+https://docs.openstack.org/developer/oslo.messaging
+"""
+
 from oslo import messaging
 
 class ServerControlEndpoint(object):
+    # extend target here.
     target = messaging.Target(namespace = 'control', version = '2.0')
 
     def __init__(self, server):
@@ -12,11 +18,11 @@ class ServerControlEndpoint(object):
 
 
 class TestEndpoint(object):
+    # use target global, which is get_rpc_server's param "target".
     def test(self, ctx, arg):
         return arg
 
-
-tarnsport = messaging.get_transport(cfg.CONF)
+transport = messaging.get_transport(cfg.CONF)
 target = messaging.Target(topic = 'test', server = 'server1')
 
 endpoints = [

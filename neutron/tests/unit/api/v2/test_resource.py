@@ -25,6 +25,8 @@ from neutron import context
 from neutron.tests import base
 from neutron import wsgi
 
+# mock and MagicMock: http://stackoverflow.com/questions/17181687/mock-vs-magicmock
+# webtest: https://pypi.python.org/pypi/WebTest
 
 class RequestTestCase(base.BaseTestCase):
     def setUp(self):
@@ -228,6 +230,7 @@ class ResourceTestCase(base.BaseTestCase):
 
         routing_args = {'action': 'test'}
         environ = {'wsgiorg.routing_args': (None, routing_args)}
+        # this is to test get of this wsgi_resource.Resource(controller)
         res = resource.get('', extra_environ=environ, expect_errors=True)
         return res
 

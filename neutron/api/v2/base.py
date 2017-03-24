@@ -50,7 +50,7 @@ FAULT_MAP = {exceptions.NotFound: webob.exc.HTTPNotFound,
              oslo_policy.PolicyNotAuthorized: webob.exc.HTTPForbidden
              }
 
-
+# controller表示一个wsgi app。
 class Controller(object):
     LIST = 'list'
     SHOW = 'show'

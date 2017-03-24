@@ -15,7 +15,8 @@
 
 """
 Utility methods for working with WSGI servers redux
-"""
+这是大部分API用于将自己封装成WSGI模式的代码
+。"""
 
 import sys
 
@@ -43,6 +44,11 @@ def Resource(controller, faults=None, deserializers=None, serializers=None,
              action_status=None):
     """Represents an API entity resource and the associated serialization and
     deserialization logic
+
+    代表一个WSGI APP。
+
+    基本用法见test_request:
+    resource = Resource(controller)
     """
     default_deserializers = {'application/json': wsgi.JSONDeserializer()}
     default_serializers = {'application/json': wsgi.JSONDictSerializer()}
