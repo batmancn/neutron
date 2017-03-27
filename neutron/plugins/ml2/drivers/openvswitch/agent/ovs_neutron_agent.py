@@ -392,6 +392,10 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
             connection, constants.EXTENSION_DRIVER_TYPE,
             self.agent_api)
 
+    # Mytest
+    def my_test(self, context, **kwargs):
+        LOG.info("my_test kwargs:", kwargs)
+
     def port_update(self, context, **kwargs):
         port = kwargs.get('port')
         # Put the port identifier in the updated_ports set.

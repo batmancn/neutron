@@ -640,6 +640,10 @@ class Ml2Plugin(db_base_plugin_v2.NeutronDbPluginV2,
                                   segment[api.NETWORK_TYPE],
                                   segment[api.SEGMENTATION_ID],
                                   segment[api.PHYSICAL_NETWORK])
+        self.notifier.my_test(mech_context._plugin_context, port,
+                                  segment[api.NETWORK_TYPE],
+                                  segment[api.SEGMENTATION_ID],
+                                  segment[api.PHYSICAL_NETWORK])
 
     def _delete_objects(self, context, resource, objects):
         delete_op = getattr(self, 'delete_%s' % resource)
