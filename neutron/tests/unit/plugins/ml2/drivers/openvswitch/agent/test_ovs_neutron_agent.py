@@ -1067,15 +1067,8 @@ class TestOvsNeutronAgent(object):
             self.assertTrue(self.agent.fullsync)
 
     def test_my_test(self):
-        port = {"id": TEST_PORT_ID1,
-                "network_id": TEST_NETWORK_ID1,
-                "admin_state_up": False}
-        self.agent.my_test("unused_context",
-                               port=port,
-                               network_type="vlan",
-                               segmentation_id="1",
-                               physical_network="physnet")
-        self.assertEqual(set([TEST_PORT_ID1]), self.agent.my_test)
+        self.ovs_agent.my_test(port="port")
+        self.assertEqual("port:port ", self.agent.my_test_value)
 
     def test_port_update(self):
         port = {"id": TEST_PORT_ID1,

@@ -292,6 +292,9 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
 
         self.quitting_rpc_timeout = agent_conf.quitting_rpc_timeout
 
+        # For my_test
+        self.my_test_value = ''
+
     def _parse_bridge_mappings(self, bridge_mappings):
         try:
             return helpers.parse_mappings(bridge_mappings)
@@ -394,7 +397,10 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
 
     # Mytest
     def my_test(self, context, **kwargs):
-        LOG.info("my_test kwargs:", kwargs)
+        self.my_test_value = ''
+        for key in kwargs:
+            self.my_test_value += "%s:%s " % (key, kwargs[key])
+        LOG.info("my_test self.my_test_value: %s", self.my_test_value)
 
     def port_update(self, context, **kwargs):
         port = kwargs.get('port')
