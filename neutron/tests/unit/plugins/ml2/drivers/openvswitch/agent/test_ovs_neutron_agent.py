@@ -1067,7 +1067,7 @@ class TestOvsNeutronAgent(object):
             self.assertTrue(self.agent.fullsync)
 
     def test_my_test(self):
-        self.ovs_agent.my_test(port="port")
+        self.agent.my_test(port="port")
         self.assertEqual("port:port ", self.agent.my_test_value)
 
     def test_port_update(self):
