@@ -13,6 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+ovs_neutron_agent.py is agent side in compute node to work for ml2
+plugin by RPC, all these methods could be called by Ml2Plugin through
+RPC.
+"""
+
 import base64
 import collections
 import functools
@@ -117,6 +123,22 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
     veth or a pair of patch ports is used to connect the local VLAN on
     the integration bridge with the physical network bridge, with flow
     rules adding, modifying, or stripping VLAN tags as necessary.
+
+    上面这些说的是L2Agent的业务逻辑，即刚开始创建两个bridge（br-int，br-tun），
+    所有VM上的VIF连接到br-int上（可能通过veth或者openflow port）。
+
+    如果是vlan、flat模式，通往其他compute node、network node、外网的流量
+    通过openflow port流向br-eth，进而通过eth端口交给物理交换机处理。
+
+    如果是vxlan、gre这样的tunnel模式，通往其他compute node、network node、
+    外网的流量通过openflow port流向br-tun。在br-tun中首先通过多表完成tunnel
+    的处理，然后通过物理端口直接发出去。
+
+    除此以外还有通过专用物理交换机做tunnel封装的，那么可以采用类似vlan模式的拓扑。
+
+
+    plugin通过RPC操作本地存储的内容（例如self.deleted_port），然后在rpc_loop中
+    集中处理增删的数据，与OVS很像。
     '''
 
     # history
@@ -125,6 +147,7 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
     #   1.2 Support DVR (Distributed Virtual Router) RPC
     #   1.3 Added param devices_to_update to security_groups_provider_updated
     #   1.4 Added support for network_update
+
     target = oslo_messaging.Target(version='1.4')
 
     def __init__(self, bridge_classes, conf=None):
@@ -142,19 +165,31 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
         self.fullsync = False
         # init bridge classes with configured datapath type.
         self.br_int_cls, self.br_phys_cls, self.br_tun_cls = (
+            # functools.partial:
+            # http://wklken.me/posts/2013/08/18/python-extra-functools.html
+            # 这里实际是:
+            # self.br_int_cls = functools.partial(bridge_classes['br_int'](datapath_type=ovs_conf.datapath_type))
+            # etc.
             functools.partial(bridge_classes[b],
                               datapath_type=ovs_conf.datapath_type)
             for b in ('br_int', 'br_phys', 'br_tun'))
 
+        # this is to determine use veth or not.
         self.use_veth_interconnection = ovs_conf.use_veth_interconnection
+        # every veth has mtu, such as 1500, it's confgured in CONF.
         self.veth_mtu = agent_conf.veth_mtu
+        # get available vlans.
         self.available_local_vlans = set(moves.range(p_const.MIN_VLAN_TAG,
                                                      p_const.MAX_VLAN_TAG))
+        # if use tunnel, then assign tunnel type.
         self.tunnel_types = agent_conf.tunnel_types or []
+        # l2_pop type.
         self.l2_pop = agent_conf.l2_population
         # TODO(ethuleau): Change ARP responder so it's not dependent on the
         #                 ML2 l2 population mechanism driver.
+        # DVR?
         self.enable_distributed_routing = agent_conf.enable_distributed_routing
+        # ARP responder.
         self.arp_responder_enabled = agent_conf.arp_responder and self.l2_pop
 
         host = self.conf.host
@@ -168,6 +203,7 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
         # Keep track of int_br's device count for use by _report_state()
         self.int_br_device_count = 0
 
+        # init br-int
         self.int_br = self.br_int_cls(ovs_conf.integration_bridge)
         self.setup_integration_br()
         # Stores port update notifications for processing in main rpc loop
@@ -179,9 +215,12 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
         # keeps association between ports and ofports to detect ofport change
         self.vifname_to_ofport_map = {}
         self.setup_rpc()
+        # ovs_conf.bridge_mappings???
         self.bridge_mappings = self._parse_bridge_mappings(
             ovs_conf.bridge_mappings)
         self.setup_physical_bridges(self.bridge_mappings)
+        # self.vlan_manager用于管理本地（br-int）中的vlan如何映射到外网的
+        # segment-id，而这个segment-id用于租户隔离。
         self.vlan_manager = vlanmanager.LocalVlanManager()
 
         self._reset_tunnel_ofports()
@@ -363,9 +402,13 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
                                p_const.TYPE_VXLAN: {}}
 
     def setup_rpc(self):
+        # rpc to plugin
         self.plugin_rpc = OVSPluginApi(topics.PLUGIN)
+        # rpc to securety group plugin
         self.sg_plugin_rpc = sg_rpc.SecurityGroupServerRpcApi(topics.PLUGIN)
+        # rpc to dvr plugin
         self.dvr_plugin_rpc = dvr_rpc.DVRServerRpcApi(topics.PLUGIN)
+        # rpc to report
         self.state_rpc = agent_rpc.PluginReportStateAPI(topics.REPORTS)
 
         # RPC network init
@@ -998,7 +1041,10 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
         #   ovs-vsctl -- --may-exist add-br BRIDGE_NAME
         # which does nothing if bridge already exists.
         self.int_br.create()
+        # ovs-vsctl set-secure-mode
+        # secure mode就是bridge与控制器断开连接之后不清空流表。
         self.int_br.set_secure_mode()
+        # ovs-vsctl set-controller
         self.int_br.setup_controllers(self.conf)
 
         if self.conf.AGENT.drop_flows_on_start:

@@ -44,11 +44,13 @@ from neutron.plugins.ml2.drivers.openvswitch.agent.openflow.ovs_ofctl \
 
 class OVSTunnelBridge(ovs_bridge.OVSAgentBridge,
                       br_dvr_process.OVSDVRProcessMixin):
-    """openvswitch agent tunnel bridge specific logic."""
+    """openvswitch agent tunnel bridge specific logic.
+    多表中的流参看：http://www.aboutyun.com/thread-16563-1-1.html
+    """
 
     # Used by OVSDVRProcessMixin
     dvr_process_table_id = constants.DVR_PROCESS
-    dvr_process_next_table_id = constants.PATCH_LV_TO_TUN
+    dvr_process_next_table_id = constants.PATCH_LV_TO_TUN # patch local vm to tunnel
 
     def setup_default_table(self, patch_int_ofport, arp_responder_enabled):
         # Table 0 (default) will sort incoming traffic depending on in_port

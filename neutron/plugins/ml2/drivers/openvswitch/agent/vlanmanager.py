@@ -64,6 +64,7 @@ class LocalVlanManager(object):
     segmentation ids.
     """
 
+    # 这个是单例模式
     def __new__(cls):
         if not hasattr(cls, '_instance'):
             cls._instance = super(LocalVlanManager, cls).__new__(cls)
