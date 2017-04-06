@@ -7,6 +7,9 @@ the forwarding information among agents using a common RPC API.
 
 More informations could be found on the wiki page [1].
 
+l2pop主要用于通过overlay方式实现大两层的机制，这里支持vxlan-linuxBridge与
+vxlan/gre-ovs。
+
 VXLAN Linux kernel:
 -------------------
 The VXLAN Linux kernel module provide all necessary functionalities to populate

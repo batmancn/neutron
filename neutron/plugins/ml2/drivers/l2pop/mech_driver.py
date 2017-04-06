@@ -28,6 +28,19 @@ from neutron.plugins.ml2 import driver_api as api
 from neutron.plugins.ml2.drivers.l2pop import db as l2pop_db
 from neutron.plugins.ml2.drivers.l2pop import rpc as l2pop_rpc
 
+'''
+api.MechanismDriver: MechanismDriver定义了Mechanism驱动该有的API，
+这里继承这个用于plugin对其调用，参看MechanismDriver解释。
+
+neutron的流程中是完成一个任务，都是pre*、DB操作、post*，其中pre*是对context
+做检查，DB操作是对数据库操作，post*是具体配置（可能是通过agent，也可能是其他）。
+如果在这次操作中使用了L2POP这个驱动，那么就需要调用到这里的API。
+
+L2pop中大部分工作（例如创建一个network）是在DB中存储配置，所以pre*看到比较少，
+另外对底层做具体配置的工作post*也比较少，因为L2POP主要通过update*那个函数
+在port天剑的时候来做配置。
+'''
+
 LOG = logging.getLogger(__name__)
 
 config.register_l2_population_opts()
@@ -69,6 +82,16 @@ class L2populationMechanismDriver(api.MechanismDriver):
         return other_fdb_ports
 
     def delete_port_postcommit(self, context):
+        '''
+        这里port的概念可以参看https://www.ustack.com/blog/neutron_intro/
+        delete port就是删除这个port。
+        所以在下面的过程中port就是要删除的port，agent_host意思是主机agent，
+        就是这个port所连接的VM或者router。
+        那么fdb_entries就是这个port上连接的这个host的fdb_entries
+        （因为一个port上可能连接多个host）。
+        然后通过L2populationAgentNotify通知L2POP agent删除相应的fdb_entries。
+        这些fdb_entries是OVS或者LB中的fdb_entries，所以才需要通知别人去完成这个工作。
+        '''
         port = context.current
         agent_host = context.host
         fdb_entries = self._get_agent_fdb(
@@ -136,6 +159,9 @@ class L2populationMechanismDriver(api.MechanismDriver):
         return True
 
     def update_port_precommit(self, context):
+        '''
+        update port这个在L2 OVS Agent中也有，可能是rpc_loop中调用。
+        '''
         port = context.current
         orig = context.original
 
@@ -146,6 +172,9 @@ class L2populationMechanismDriver(api.MechanismDriver):
             raise exceptions.InvalidInput(error_message=msg)
 
     def update_port_postcommit(self, context):
+        '''
+        这个与delete_port_postcommit类似，都是处理update port的FDB。
+        '''
         port = context.current
         orig = context.original
         if l3_hamode_db.is_ha_router_port(context, port['device_owner'],
@@ -237,6 +266,10 @@ class L2populationMechanismDriver(api.MechanismDriver):
         return agents
 
     def update_port_down(self, context):
+        '''
+        ./plugins/ml2/rpc.py:l2pop_driver.obj.update_port_down(port_context)
+        可见这个API是Plugin通过RPC调用的。
+        '''
         port = context.current
         agent_host = context.host
         l3plugin = directory.get_plugin(const.L3)

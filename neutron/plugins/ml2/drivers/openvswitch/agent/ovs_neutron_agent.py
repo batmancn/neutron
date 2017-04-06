@@ -124,7 +124,9 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
     the integration bridge with the physical network bridge, with flow
     rules adding, modifying, or stripping VLAN tags as necessary.
 
-    上面这些说的是L2Agent的业务逻辑，即刚开始创建两个bridge（br-int，br-tun），
+    1.
+    上面这些说的是L2Agent的业务逻辑，即刚开始(__init__())创建两个
+    bridge（br-int，br-tun），
     所有VM上的VIF连接到br-int上（可能通过veth或者openflow port）。
 
     如果是vlan、flat模式，通往其他compute node、network node、外网的流量
@@ -137,8 +139,14 @@ class OVSNeutronAgent(sg_rpc.SecurityGroupAgentRpcCallbackMixin,
     除此以外还有通过专用物理交换机做tunnel封装的，那么可以采用类似vlan模式的拓扑。
 
 
+    2.
     plugin通过RPC操作本地存储的内容（例如self.deleted_port），然后在rpc_loop中
     集中处理增删的数据，与OVS很像。
+
+    其中port_update()、port_delete()这样的是操作本地配置，这些API是plugin通过
+    RPC调用。
+
+    _process_port()这样的是本地处理配置变化的API，这个API是通过rpc_loop()调用的。
     '''
 
     # history

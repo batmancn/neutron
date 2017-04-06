@@ -654,6 +654,9 @@ class MechanismDriver(object):
         Called after all drivers have been loaded and the database has
         been initialized. No abstract methods defined below will be
         called prior to this method being called.
+
+        所有driver都被load、数据库初始化之后调用此API。此API可能是作为驱动
+        被初始化，也可能是其他人调用了，TBD????
         """
         pass
 
@@ -667,6 +670,13 @@ class MechanismDriver(object):
         database. Called inside transaction context on session. Call
         cannot block.  Raising an exception will result in a rollback
         of the current transaction.
+
+        从名字能看出来用户使用的流程是：
+        create_network_precommit:这个函数内部不能block，通过Raise exception的方式rollback。
+        do user DB operation.
+        create_network_postcommit:
+        所以在mech_driver.py中很少看到pre*这样的API被重载，即使重载了这里也
+        主要是对context中的内容做校验。
         """
         pass
 
@@ -962,6 +972,10 @@ class MechanismDriver(object):
         driver as having the intention to bind ports. This is inspected
         by the QoS service to identify the available QoS rules you
         can use with ports.
+
+        也就是说，上面这些API都是在transaction中被调用，这个不是。
+        port_bind就是在subnet上面attach port????应该是这样的，因为router
+        相关在L3 agent中操作。
         """
         pass
 
