@@ -176,6 +176,11 @@ class LinuxInterfaceDriver(object):
         clean_connections: Boolean to indicate if we should cleanup connections
           associated to removed ips
         extra_subnets: An iterable of cidrs to add as routes without address
+
+        这个函数功能类似
+        `ip link add device_name ip_cidrs`
+        `ifconfig add device_name ip_cidrs`
+        如果device_name已经存在了就不创建device。
         """
         LOG.debug("init_router_port: device_name(%s), namespace(%s)",
                   device_name, namespace)
@@ -185,9 +190,11 @@ class LinuxInterfaceDriver(object):
                      preserve_ips=preserve_ips or [],
                      clean_connections=clean_connections)
 
+        # `ip link add device_name ip_cidrs`
         device = ip_lib.IPDevice(device_name, namespace=namespace)
 
         # Manage on-link routes (routes without an associated address)
+        # new_onlink_cidrs是来自于extra_subnets，暂时不懂，不过看来可能为空。
         new_onlink_cidrs = set(s['cidr'] for s in extra_subnets or [])
 
         v4_onlink = device.route.list_onlink_routes(constants.IP_VERSION_4)

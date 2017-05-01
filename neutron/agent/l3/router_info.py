@@ -31,6 +31,10 @@ from neutron.common import ipv6_utils
 from neutron.common import utils as common_utils
 from neutron.ipam import utils as ipam_utils
 
+'''
+router_info是neutron中的RDB。
+'''
+
 LOG = logging.getLogger(__name__)
 INTERNAL_DEV_PREFIX = namespaces.INTERNAL_DEV_PREFIX
 EXTERNAL_DEV_PREFIX = namespaces.EXTERNAL_DEV_PREFIX
@@ -423,6 +427,8 @@ class RouterInfo(object):
     def _internal_network_added(self, ns_name, network_id, port_id,
                                 fixed_ips, mac_address,
                                 interface_name, prefix, mtu=None):
+        # 此处就是在ns_name命名空间中添加device及其相应的路由
+        # 参看init_router_port解释。
         LOG.debug("adding internal network: prefix(%s), port(%s)",
                   prefix, port_id)
         self.driver.plug(network_id, port_id, interface_name, mac_address,
@@ -439,11 +445,17 @@ class RouterInfo(object):
                                           self.agent_conf.send_arp_for_ha)
 
     def internal_network_added(self, port):
+        # 参看https://docs.openstack.org/developer/neutron/devref/layer3.html
+        # network_id就是`openstack network list`:ID
+        # port_id就是`openstack port list`:ID
+        # fixed_ips就是`openstack port list`:Fixed IP Addresses
+        # mac_address就是`openstack port list`:MAC Address
         network_id = port['network_id']
         port_id = port['id']
         fixed_ips = port['fixed_ips']
         mac_address = port['mac_address']
 
+        # interface_name就是"qr-0ba8700e-da"这样的ovs或者LB的port
         interface_name = self.get_internal_device_name(port_id)
 
         self._internal_network_added(self.ns_name,
@@ -515,6 +527,8 @@ class RouterInfo(object):
             device_name, mark_mask)
 
     def _process_internal_ports(self):
+        # 当租户添加/删除了internal port，调用这个函数。
+        # internal port就是vm连接到router的port，注意这个port是逻辑L3端口。
         existing_port_ids = set(p['id'] for p in self.internal_ports)
 
         internal_ports = self.router.get(lib_constants.INTERFACE_KEY, [])
@@ -528,8 +542,11 @@ class RouterInfo(object):
         updated_ports = self._get_updated_ports(self.internal_ports,
                                                 internal_ports)
 
+        # 对于新增加的internal port
         enable_ra = False
         for p in new_ports:
+            # 首先在添加这个port，也就是在br-int上添加这个port，拓扑可以参看
+            # https://docs.openstack.org/developer/neutron/devref/layer3.html
             self.internal_network_added(p)
             LOG.debug("appending port %s to internal_ports cache", p)
             self.internal_ports.append(p)
@@ -749,6 +766,7 @@ class RouterInfo(object):
 
     def _process_external_gateway(self, ex_gw_port):
         # TODO(Carl) Refactor to clarify roles of ex_gw_port vs self.ex_gw_port
+        # 这个与处理internal port那个类似，只是处理的是通往br-ex的port。
         ex_gw_port_id = (ex_gw_port and ex_gw_port['id'] or
                          self.ex_gw_port and self.ex_gw_port['id'])
 
@@ -1095,13 +1113,30 @@ class RouterInfo(object):
         applied to this router.
 
         :param agent: Passes the agent in order to send RPC messages.
+
+        这里是update router的主要工作，就是根据本地配置的变化来更新底层。
+        port、subnet等概念参考：
+        https://www.ustack.com/blog/neutron_intro/
+        https://docs.openstack.org/developer/neutron/devref/layer3.html
+
+        另外一定注意这里是面向租户的L3网络（从租户视角看），不要按照L2网络的
+        方式思维。
+
+        这里的port是租户添加的port（参看上面连接），不是br-int等上面的port。
+        始终要区分租户的角度与开发者的角度，这里应该都是租户的角度。
         """
         LOG.debug("process router updates")
+        # 处理连接本地的ports，port概念见上，所以这里是router连接本地vm的port。
         self._process_internal_ports()
+        # 处理ipv6 prefix delegation。这个pd不懂？？？？
         self.agent.pd.sync_router(self.router['id'])
+        # 处理通向外网的ports，又处理了SNAT、DNAT。处理br-ex上的port
         self.process_external()
+        # 处理ipv6的address scope
+        # http://cn-test.h3c.com/Products___Technology/Technology/Group_Management/Other_technology/Technology_book/200803/336046_30003_0.htm
         self.process_address_scope()
         # Process static routes for router
+        # 这里的static route就是本地配置变换之后更新的路由？？？？
         self.routes_updated(self.routes, self.router['routes'])
         self.routes = self.router['routes']
 

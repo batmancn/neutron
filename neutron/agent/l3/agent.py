@@ -90,6 +90,9 @@ class L3PluginApi(object):
               - delete_agent_gateway_port
         1.8 - Added address scope information
         1.9 - Added get_router_ids
+
+    L3PluginApi主要通过self.client与target通信来完成工作，所以这个plugin用于
+    client端（不在neutron-l3-agent这个service中，而是在其他的模块中）。
     """
 
     def __init__(self, topic, host):
@@ -178,6 +181,13 @@ class L3NATAgent(ha.AgentMixin,
         1.3 - fipnamespace_delete_on_ext_net - to delete fipnamespace
               after the external network is removed
               Needed by the L3 service when dealing with DVR
+
+    L3NATAgent继承了几个Mixin可以看出来这个类主要来完成DB中的工作。
+    另外这里还定义了target，应该是RPC用。
+
+    和L2 OVS Agent类似，这里也是RPC client调用这里的router_delete()这样的
+    函数，然后更新本对象中的配置，然后在_process_routers_loop中通过配置的更新
+    来更新底层的配置。
     """
     target = oslo_messaging.Target(version='1.3')
 
@@ -306,6 +316,14 @@ class L3NATAgent(ha.AgentMixin,
                     raise Exception(msg)
 
     def _create_router(self, router_id, router):
+        '''
+        这个是创建底层router的地方，主要创建了这几种router的其中一种：
+            dvr_edge_ha_router.DvrEdgeHaRouter(*args, **kwargs)
+            dvr_router.DvrEdgeRouter(*args, **kwargs)
+            dvr_local_router.DvrLocalRouter(*args, **kwargs)
+            ha_router.HaRouter(*args, **kwargs)
+            legacy_router.LegacyRouter(*args, **kwargs)
+        '''
         args = []
         kwargs = {
             'agent': self,
@@ -414,6 +432,8 @@ class L3NATAgent(ha.AgentMixin,
         self.routers_updated(context, payload)
 
     def _process_router_if_compatible(self, router):
+        # 首先检查是否存在br-ex
+        # 拓扑参看https://docs.openstack.org/developer/neutron/devref/layer3.html
         if (self.conf.external_network_bridge and
             not ip_lib.device_exists(self.conf.external_network_bridge)):
             LOG.error(_LE("The external network bridge '%s' does not exist"),
@@ -421,11 +441,13 @@ class L3NATAgent(ha.AgentMixin,
             return
 
         # Either ex_net_id or handle_internal_only_routers must be set
+        # 即必须有br-ex或者设置了handle_internal_only_routers，否则出错。
         ex_net_id = (router['external_gateway_info'] or {}).get('network_id')
         if not ex_net_id and not self.conf.handle_internal_only_routers:
             raise n_exc.RouterNotCompatibleWithAgent(router_id=router['id'])
 
         # If target_ex_net_id and ex_net_id are set they must be equal
+        # 即配置中使用的ex_net_id必须和本地存储的target_ex_net_id相等
         target_ex_net_id = self._fetch_external_net_id()
         if (target_ex_net_id and ex_net_id and ex_net_id != target_ex_net_id):
             # Double check that our single external_net_id has not changed
@@ -434,20 +456,28 @@ class L3NATAgent(ha.AgentMixin,
                 raise n_exc.RouterNotCompatibleWithAgent(
                     router_id=router['id'])
 
+        # self.router_info存储了本地的router id，如果没有在这里面就是add。
         if router['id'] not in self.router_info:
             self._process_added_router(router)
         else:
             self._process_updated_router(router)
 
     def _process_added_router(self, router):
+        # 首先真实添加router，这里使用lagecy router。并且本地存储这个router：
+        # self.router_info[router_id] = ri
+        # 其中ri是LegacyRouter
         self._router_added(router['id'], router)
         ri = self.router_info[router['id']]
+        # 调用LegacyRouter.router
         ri.router = router
         ri.process()
+        # 通知创建router的消息
         registry.notify(resources.ROUTER, events.AFTER_CREATE, self, router=ri)
+        # 调用l3_ext_manager创建router的函数
         self.l3_ext_manager.add_router(self.context, router)
 
     def _process_updated_router(self, router):
+        # 首先获得LegacyRouter，其他的处理与_process_added_router一样。
         ri = self.router_info[router['id']]
         ri.router = router
         registry.notify(resources.ROUTER, events.BEFORE_UPDATE,
@@ -464,14 +494,20 @@ class L3NATAgent(ha.AgentMixin,
         self._queue.add(router_update)
 
     def _process_router_update(self):
+        # loop主要Body
+        # 首先解析出来rp,update
         for rp, update in self._queue.each_update_to_next_router():
             LOG.debug("Starting router update for %s, action %s, priority %s",
                       update.id, update.action, update.priority)
+            # 如果是update PD，处理并continue
             if update.action == queue.PD_UPDATE:
                 self.pd.process_prefix_update()
                 LOG.debug("Finished a router update for %s", update.id)
                 continue
             router = update.router
+            # 如果是update，并且不是删除router，并且router存在。
+            # 如果本plugin中没有获取到这个routers，那么这里的检查不同过。
+            # 否则router = routers[0]
             if update.action != queue.DELETE_ROUTER and not router:
                 try:
                     update.timestamp = timeutils.utcnow()
@@ -485,7 +521,7 @@ class L3NATAgent(ha.AgentMixin,
 
                 if routers:
                     router = routers[0]
-
+            # 如果是删除router，那么删除他，continue
             if not router:
                 removed = self._safe_router_removed(update.id)
                 if not removed:
@@ -498,7 +534,7 @@ class L3NATAgent(ha.AgentMixin,
                     rp.fetched_and_processed(update.timestamp)
                 LOG.debug("Finished a router update for %s", update.id)
                 continue
-
+            # 如果不是删除，那么_process_router_if_compatible
             try:
                 self._process_router_if_compatible(router)
             except n_exc.RouterNotCompatibleWithAgent as e:
@@ -519,6 +555,7 @@ class L3NATAgent(ha.AgentMixin,
             rp.fetched_and_processed(update.timestamp)
 
     def _process_routers_loop(self):
+        # 启动loop处理RPC
         LOG.debug("Starting _process_routers_loop")
         pool = eventlet.GreenPool(size=8)
         while True:
@@ -649,7 +686,10 @@ class L3NATAgent(ha.AgentMixin,
 
 
 class L3NATAgentWithStateReport(L3NATAgent):
-
+    '''
+    L3NATAgentWithStateReport类名字看出来这个类主要做StateReport，然后从继承的
+    类看出来这个类还能做L3NATAgent。
+    '''
     def __init__(self, host, conf=None):
         super(L3NATAgentWithStateReport, self).__init__(host=host, conf=conf)
         self.state_rpc = agent_rpc.PluginReportStateAPI(topics.REPORTS)

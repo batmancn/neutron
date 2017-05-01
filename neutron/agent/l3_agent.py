@@ -46,6 +46,17 @@ def register_opts(conf):
     config.register_availability_zone_opts_helper(conf)
 
 
+'''
+这个是neutron-l3-agent这个RPC service的初始化函数，这个service就是用于
+处理RPC请求的。
+
+L3中有几个概念参看：https://www.ustack.com/blog/neutron_intro/
+也可以从horizon中看出来，注意这里的概念是从tenent的角度来看
+network: L2 asegment network.
+subnet: L3 network with sociated configure.
+router: connect subnet.
+'''
+
 def main(manager='neutron.agent.l3.agent.L3NATAgentWithStateReport'):
     register_opts(cfg.CONF)
     common_config.init(sys.argv[1:])
