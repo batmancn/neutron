@@ -1,17 +1,19 @@
 1. http://www.aboutyun.com/forum.php?mod=viewthread&tid=16712&highlight=neutron%2B%2B%CF%B5%C1%D0
 2. https://upload.wikimedia.org/wikipedia/commons/3/37/Netfilter-packet-flow.svg
 
-FIREWALL:
+FIREWALL种类?
+------------
+
 - outside/inside/DMZ network.
 - L4 FW, L7 FW.
 - main FW, distribute FW.
 - rule, stratgy.
 - IP Spoofing.
 
-BRIDGE:
-<1>, <2>.
 
-RULES of IPTABLES:
+RULES of IPTABLES?
+-----------------
+
 #允许本机通过访问外网，但是将进来的 udp，tcp 和 icmp 的网络包写日志（INPUT 规则的 physdev-in 肯定是 eth1 了）
 iptables -A INPUT -p udp -m physdev --physdev-in eth1 -j LOG
 iptables -A INPUT -p tcp -m physdev --physdev-in eth1 -j LOG
@@ -37,10 +39,14 @@ iptables -A FORWARD -p tcp --dport 6667 -m physdev --physdev-in eth1 -j REJECT
 iptables -A FORWARD -p tcp --syn -m physdev --physdev-in eth1 --physdev-out eth0 -j REJECT
 
 
-IPSET:
+IPSET?
+-----
+
 refer <1>
 
 
-SECURITY GROUP, FWaas:
-refer <1>
-Nova security groups, neutron security groups, neutron fwaas.
+SECURITY GROUP, FWaas?
+---------------------
+
+refer <1>中“2. Neutron 防火墙和安全组概述”一节中的表。这个很重要。
+其中qbr是连接到br-int上的linux bridge，所以之前的理解有些偏差。

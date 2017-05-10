@@ -29,3 +29,25 @@ Tenant HA/scapbility:
 - use DVR and Distribute-DHCP to reduce network node traffic load.
 - use L2 population and arp responder to reduce BUM.
 - HA and extension(LBaas, Fwaas, VPNaas) is now not stable, wait for graduate.
+
+
+Code orgnize?
+------------
+
+rest api
+    |
+neutron-server - Database
+    |
+drivers
+    |
+plugins
+    |
+    RPC
+    |
+agents
+
+rest api: neutron/api/*
+neutron-server: neutron/server.py
+Database:
+drivers: ???
+plugins: neutron/plugins/*
