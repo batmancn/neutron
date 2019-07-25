@@ -13,24 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from oslo_config import cfg
-from oslo_service import wsgi as base_wsgi
-import routes as routes_mapper
-import six
+# 使用的库：
+from oslo_config import cfg # oslo_config，用于配置文件解析
+from oslo_service import wsgi as base_wsgi # oslo_service.swgi，用于wsgi，一个python http框架
+import routes as routes_mapper # python routes库，python的redis routes系统，https://routes.readthedocs.io/en/latest/
+import six # url字符串解析用的
 import six.moves.urllib.parse as urlparse
-import webob
+import webob # python的WSGI对象解析库，https://webob.org/
 import webob.dec
 import webob.exc
 
-from neutron.api import extensions
+from neutron.api import extensions # neutron.api的一些common库
 from neutron.api.v2 import attributes
 from neutron.api.v2 import base
-from neutron import manager
-from neutron import policy
-from neutron.quota import resource_registry
-from neutron import wsgi
+from neutron import manager # ？？？
+from neutron import policy # ？？？
+from neutron.quota import resource_registry # ？？？
+from neutron import wsgi # ？？？
 
-
+# 下面这一段RESOURCES等定义，是openstack的common的定义资源的方式
+# 使用了resource_registry库？？？
+# RESOURCES定义了router支持的API，也就是network
+# 具体restapi的构造在APIRouter.__init__方法中，通过其中的_map做的，具体参考那里的注释
 RESOURCES = {'network': 'networks',
              'subnet': 'subnets',
              'subnetpool': 'subnetpools',
@@ -73,6 +77,10 @@ class APIRouter(base_wsgi.Router):
     def __init__(self, **local_config):
         # get URL mapping facilities, how to use refer to
         # https://routes.readthedocs.io/en/latest/
+        #
+        # 这里比较重要的一个工作就是构造restapi
+
+        # routes_mapper可以制作
         mapper = routes_mapper.Mapper()
         plugin = manager.NeutronManager.get_plugin() # get plugins
         ext_mgr = extensions.PluginAwareExtensionManager.get_instance()
